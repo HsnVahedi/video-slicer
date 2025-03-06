@@ -13,7 +13,7 @@ import WarningModal from '@/app/components/modals/warning';
 // Add this type declaration at the top of your file, after your existing imports
 declare module 'react' {
   interface VideoHTMLAttributes<T> extends HTMLAttributes<T> {
-    webkitPlaysInline?: boolean;
+    webkitplaysinline?: string;
   }
 }
 
@@ -416,7 +416,7 @@ export default function VideoUploader() {
               controlsList="nodownload nofullscreen noremoteplayback"
               disablePictureInPicture
               playsInline
-              webkitPlaysInline
+              webkitplaysinline=""
               onContextMenu={(e) => e.preventDefault()}
               className="w-full h-auto max-h-[70vh] rounded-lg shadow-lg object-contain"
               onTimeUpdate={handleTimeUpdate}
