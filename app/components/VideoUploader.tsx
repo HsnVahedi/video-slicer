@@ -65,33 +65,39 @@ export default function VideoUploader() {
       const videoArrayBuffer = await videoBlob.arrayBuffer();
       const videoUint8Array = new Uint8Array(videoArrayBuffer);
       
-      // Write video file to FFmpeg's virtual file system
-      ffmpeg.writeFile('input.mp4', videoUint8Array);
+      // Determine file extension from MIME type for input file
+      const mimeType = videoBlob.type;
+      const inputExtension = mimeType === 'video/webm' ? 'webm' : 
+                            mimeType === 'video/mp4' ? 'mp4' : 
+                            mimeType === 'video/quicktime' ? 'mov' : 'mp4';
+      
+      // Write original video file to FFmpeg's virtual file system
+      const inputFilename = `input.${inputExtension}`;
+      ffmpeg.writeFile(inputFilename, videoUint8Array);
       
       // Sort slices by start time before processing
       const sortedSlices = [...slices].sort((a, b) => a.start - b.start);
       
-      // Process each slice
+      // Process each slice - keeping the original format
       const slicePromises = sortedSlices.map(async (slice, index) => {
-        const sliceFilename = `slice_${index}.mp4`;
+        const sliceFilename = `slice_${index}.${inputExtension}`;
         const startTime = formatTime(slice.start).slice(0, 8); // HH:MM:SS format
         const duration = slice.end - slice.start;
         
         // Execute FFmpeg command to extract slice
         await ffmpeg.exec([
           '-ss', startTime,
-          '-i', 'input.mp4',
+          '-i', inputFilename,
           '-t', duration.toString(),
-          '-c:v', 'copy',
-          '-c:a', 'copy',
+          '-c', 'copy', // Use copy to maintain the original codecs
           sliceFilename
         ]);
         
         // Read the output file
         const data = await ffmpeg.readFile(sliceFilename);
         
-        // Create file name for the slice
-        const sliceFileName = `${formatTime(slice.start).replace(/:/g, '-')}_to_${formatTime(slice.end).replace(/:/g, '-')}.mp4`;
+        // Create file name for the slice with proper extension
+        const sliceFileName = `${formatTime(slice.start).replace(/:/g, '-')}_to_${formatTime(slice.end).replace(/:/g, '-')}.${inputExtension}`;
         
         // Add to zip in folder by sequence number
         const folder = zip.folder(`${index + 1}`);
