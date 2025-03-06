@@ -34,7 +34,7 @@ export default function SuccessModal({
               onChange={(e) => onHideSuccessMessagesChange(e.target.checked)}
             />
             <label htmlFor="dont-show-again" className="ml-2 text-sm text-gray-600 cursor-pointer">
-              Don't show this message again
+              Don&apos;t show this message again
             </label>
           </div>
           

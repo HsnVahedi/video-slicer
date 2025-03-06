@@ -1,5 +1,4 @@
-import Image from "next/image";
-import VideoUploader from "./components/VideoUploader";
+import VideoUploader from "@/app/components/VideoUploader";
 
 export default function Home() {
   return (

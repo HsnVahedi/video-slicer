@@ -21,8 +21,6 @@ export default function VideoUploader() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showSplitPopup, setShowSplitPopup] = useState(false);
-  const [showEndSplitPopup, setShowEndSplitPopup] = useState(false);
   const [popupPosition, setPopupPosition] = useState(0);
   const [isSplitting, setIsSplitting] = useState(false);
   const [splittingStartTime, setSplittingStartTime] = useState<number | null>(null);
@@ -120,7 +118,7 @@ export default function VideoUploader() {
       });
       
       // Wait for all slices to be processed
-      const sliceResults = await Promise.all(slicePromises);
+      await Promise.all(slicePromises);
       
       // Generate the zip file
       const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -151,26 +149,26 @@ export default function VideoUploader() {
   };
 
   
-  const loadFFmpeg = async () => {
-    try {
-      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-      const ffmpeg = new FFmpeg();
-      ffmpeg.on('log', (message) => {
-        console.log(message);
-      });
-      await ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-      });
-      ffmpegRef.current = ffmpeg;
-    } catch (error) {
-      showError(`Failed to load FFmpeg: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
   useEffect(() => {
+    const loadFFmpeg = async () => {
+      try {
+        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+        const ffmpeg = new FFmpeg();
+        ffmpeg.on('log', (message) => {
+          console.log(message);
+        });
+        await ffmpeg.load({
+          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+        });
+        ffmpegRef.current = ffmpeg;
+      } catch (error) {
+        showError(`Failed to load FFmpeg: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    };
+    
     loadFFmpeg();
-  }, []);
+  }, []);  // No dependencies needed
 
   // Handle file selection
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -215,7 +213,7 @@ export default function VideoUploader() {
   const togglePlayPause = () => {
     if (videoRef.current) {
       if (videoRef.current.paused) {
-        handleClosePopup();
+        handleClosePopups();
         videoRef.current.play();
         setIsPlaying(true);
       } else {
@@ -254,7 +252,7 @@ export default function VideoUploader() {
       const clickPosition = e.clientX - timelineRect.left;
       const percentClicked = clickPosition / timelineRect.width;
       const newTime = percentClicked * duration;
-      handleClosePopup();
+      handleClosePopups();
       
       // Pause the video and update current time
       videoRef.current.pause();
@@ -265,26 +263,20 @@ export default function VideoUploader() {
       // Show popup at click position with calculated transform
       setPopupPosition(clickPosition);
       
-      if (isSplitting) {
-        // setShowEndSplitPopup(true);
-      } else {
+      if (!isSplitting) {
         // check if the clicked moment is inside a slice
         const isInsideSlice = slices.some(slice => 
           newTime >= slice.start && newTime <= slice.end
         );
         if (isInsideSlice) {
           setShowDeleteSlicePopup(true);
-        } else {
-          // setShowSplitPopup(true);
         }
       }
     }
   };
 
   // Hide split popups
-  const handleClosePopup = () => {
-    setShowSplitPopup(false);
-    setShowEndSplitPopup(false);
+  const handleClosePopups = () => {
     setShowDeleteSlicePopup(false);
   };
 
@@ -531,7 +523,7 @@ export default function VideoUploader() {
                         className="bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-300 cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleClosePopup();
+                          handleClosePopups();
                         }}
                       >
                         Cancel
