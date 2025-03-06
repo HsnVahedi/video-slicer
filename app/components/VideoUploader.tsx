@@ -55,6 +55,10 @@ export default function VideoUploader() {
     }
 
     try {
+      // Import JSZip dynamically
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      
       // Download the video from the blob URL
       const response = await fetch(videoSrc);
       const videoBlob = await response.blob();
@@ -64,8 +68,11 @@ export default function VideoUploader() {
       // Write video file to FFmpeg's virtual file system
       ffmpeg.writeFile('input.mp4', videoUint8Array);
       
+      // Sort slices by start time before processing
+      const sortedSlices = [...slices].sort((a, b) => a.start - b.start);
+      
       // Process each slice
-      const slicePromises = slices.map(async (slice, index) => {
+      const slicePromises = sortedSlices.map(async (slice, index) => {
         const sliceFilename = `slice_${index}.mp4`;
         const startTime = formatTime(slice.start).slice(0, 8); // HH:MM:SS format
         const duration = slice.end - slice.start;
@@ -82,42 +89,48 @@ export default function VideoUploader() {
         
         // Read the output file
         const data = await ffmpeg.readFile(sliceFilename);
-        const blob = new Blob([data], { type: 'video/mp4' });
-        const url = URL.createObjectURL(blob);
         
-        // Create a download link for the slice
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `video_slice_${formatTime(slice.start).replace(/:/g, '-')}_to_${formatTime(slice.end).replace(/:/g, '-')}.mp4`;
+        // Create file name for the slice
+        const sliceFileName = `${formatTime(slice.start).replace(/:/g, '-')}_to_${formatTime(slice.end).replace(/:/g, '-')}.mp4`;
         
-        return { link, url };
+        // Add to zip in folder by sequence number
+        const folder = zip.folder(`${index + 1}`);
+        if (folder) {
+          folder.file(sliceFileName, data);
+        } else {
+          // Fallback: add to root with folder prefix
+          zip.file(`${index + 1}/${sliceFileName}`, data);
+        }
+        
+        return { 
+          fileName: sliceFileName, 
+          folderName: `${index + 1}` 
+        };
       });
       
       // Wait for all slices to be processed
       const sliceResults = await Promise.all(slicePromises);
       
-      // Create a zip file containing all slices if there are multiple slices
-      if (sliceResults.length > 1) {
-        // Could use JSZip or similar library here
-        // For now, just trigger downloads for each slice
-        sliceResults.forEach(({ link }) => {
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        });
-      } else if (sliceResults.length === 1) {
-        // For a single slice, just download it directly
-        document.body.appendChild(sliceResults[0].link);
-        sliceResults[0].link.click();
-        document.body.removeChild(sliceResults[0].link);
-      }
+      // Generate the zip file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
       
-      // Clean up URLs to prevent memory leaks
+      // Create a download link for the zip
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `video_slices_export.zip`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up URL to prevent memory leaks
       setTimeout(() => {
-        sliceResults.forEach(({ url }) => URL.revokeObjectURL(url));
+        URL.revokeObjectURL(url);
       }, 100);
       
-      showSuccess(`Successfully exported ${sliceResults.length} slice${sliceResults.length > 1 ? 's' : ''}!`);
+      showSuccess(`Successfully exported ${sliceResults.length} slice${sliceResults.length > 1 ? 's' : ''} in a zip file!`);
     } catch (error) {
       console.error('Error splitting video:', error);
       showError(`Error splitting video: ${error instanceof Error ? error.message : 'Unknown error'}`);
