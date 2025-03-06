@@ -10,6 +10,13 @@ import SuccessModal from '@/app/components/modals/success';
 import PlaybackSpeedModal from '@/app/components/modals/playbackSpeed';
 import WarningModal from '@/app/components/modals/warning';
 
+// Add this type declaration at the top of your file, after your existing imports
+declare module 'react' {
+  interface VideoHTMLAttributes<T> extends HTMLAttributes<T> {
+    webkitPlaysInline?: boolean;
+  }
+}
+
 type Slice = {
   start: number;
   end: number;
@@ -408,6 +415,8 @@ export default function VideoUploader() {
               // controls
               controlsList="nodownload nofullscreen noremoteplayback"
               disablePictureInPicture
+              playsInline
+              webkitPlaysInline
               onContextMenu={(e) => e.preventDefault()}
               className="w-full h-auto max-h-[70vh] rounded-lg shadow-lg object-contain"
               onTimeUpdate={handleTimeUpdate}
