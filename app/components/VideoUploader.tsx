@@ -587,11 +587,12 @@ export default function VideoUploader() {
                             setSlices([...slices, newSlice]);
                             console.log("Added slice:", formatTime(newSlice.start), "to", formatTime(newSlice.end));
                             showSliceCreatedSuccess();
+                            setIsSplitting(false);
+                            setSplittingStartTime(null);
                           }
                         }
                       }
-                      setIsSplitting(false);
-                      setSplittingStartTime(null);
+
                     }}
                     className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors cursor-pointer"
                   >
