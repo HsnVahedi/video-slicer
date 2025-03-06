@@ -46,6 +46,9 @@ export default function VideoUploader() {
   const [videoSize, setVideoSize] = useState<number | null>(null);
   const [showVideoSizeWarningModal, setShowVideoSizeWarningModal] = useState<boolean>(false);
   const [showSplittingInProgressModal, setShowSplittingInProgressModal] = useState<boolean>(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragPosition, setDragPosition] = useState<number | null>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   const ffmpegRef = useRef<FFmpeg | null>(null);
 
@@ -316,6 +319,79 @@ export default function VideoUploader() {
     }
   };
 
+  // Add these handler functions after the other handler functions
+  const handleCursorMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent timeline click
+    if (videoRef.current) {
+      videoRef.current.pause(); // Pause video when starting to drag
+      setIsPlaying(false);
+      setIsDragging(true);
+      
+      // Initialize drag position to current cursor position
+      if (timelineRef.current) {
+        const timelineRect = timelineRef.current.getBoundingClientRect();
+        setDragPosition(e.clientX - timelineRect.left);
+      }
+    }
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (isDragging && timelineRef.current) {
+      const timelineRect = timelineRef.current.getBoundingClientRect();
+      // Constrain position to timeline bounds
+      let position = e.clientX - timelineRect.left;
+      position = Math.max(0, Math.min(position, timelineRect.width));
+      setDragPosition(position);
+    }
+  };
+
+  const handleMouseUp = (e: MouseEvent) => {
+    if (isDragging && timelineRef.current && videoRef.current) {
+      const timelineRect = timelineRef.current.getBoundingClientRect();
+      // Use dragPosition if available, otherwise calculate from event
+      let position = dragPosition !== null ? dragPosition : e.clientX - timelineRect.left;
+      position = Math.max(0, Math.min(position, timelineRect.width));
+      
+      const percentClicked = position / timelineRect.width;
+      const newTime = percentClicked * videoRef.current.duration;
+      
+      // Update current time
+      videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+      
+      // Reset drag state
+      setIsDragging(false);
+      setDragPosition(null);
+      
+      // Handle existing popup logic
+      handleClosePopups();
+      setPopupPosition(position);
+      
+      if (!isSplitting) {
+        // Check if inside a slice (same as in handleTimelineClick)
+        const isInsideSlice = slices.some(slice => 
+          newTime >= slice.start && newTime <= slice.end
+        );
+        if (isInsideSlice) {
+          setShowDeleteSlicePopup(true);
+        }
+      }
+    }
+  };
+
+  // Add this effect after the other useEffect hooks
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragPosition, isSplitting, slices]);
+
   return (
     <div className="flex flex-col items-center justify-center w-full">
       {/* Slicing in Progress Modal */}
@@ -472,6 +548,7 @@ export default function VideoUploader() {
               <span>{formatTime(duration)}</span>
             </div>
             <div 
+              ref={timelineRef}
               className={`relative h-16 ${isSplitting ? 'bg-red-50' : 'bg-gray-200'} rounded w-full cursor-pointer`}
               onClick={handleTimelineClick}
             >
@@ -489,8 +566,13 @@ export default function VideoUploader() {
               
               {/* Current Time Cursor */}
               <div 
-                className="absolute top-0 h-full w-1 bg-orange-500 hover:bg-orange-600 transition-colors z-10"
-                style={{ left: `calc(${(currentTime / duration) * 100}% - 1px)` }}
+                className="absolute top-0 h-full w-1 bg-orange-500 hover:bg-orange-600 transition-colors z-10 cursor-ew-resize"
+                style={{ 
+                  left: isDragging && dragPosition !== null 
+                    ? `${dragPosition}px` 
+                    : `calc(${(currentTime / duration) * 100}% - 1px)` 
+                }}
+                onMouseDown={handleCursorMouseDown}
               />
               
               {/* Splitting Start Time Cursor */}
