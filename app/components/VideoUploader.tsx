@@ -6,13 +6,14 @@ import { toBlobURL } from "@ffmpeg/util";
 import ErrorModal from '@/app/components/modals/error';
 import ProgressingModal from '@/app/components/modals/progress';
 import OptionalInfoModal from '@/app/components/modals/optionalInfo';
+import SuccessModal from '@/app/components/modals/success';
 
 
 type Slice = {
   start: number;
   end: number;
 }; 
-                  
+
 
 export default function VideoUploader() {
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
@@ -31,7 +32,7 @@ export default function VideoUploader() {
   const [errorModal, setErrorModal] = useState<{show: boolean, message: string}>({show: false, message: ""});
   const [sliceCreationInfoModal, setSliceCreationModal] = useState<{show: boolean, message: string}>({show: false, message: ""});
   const [sliceCreatedModal, setSliceCreatedModal] = useState<boolean>(false);
-  const [hideSuccessMessages, setHideSuccessMessages] = useState<boolean>(false);
+  const [hideSliceCreationModal, setHideSliceCreationModal] = useState<boolean>(false);
   const [showSpeedModal, setShowSpeedModal] = useState<boolean>(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [selectedSpeed, setSelectedSpeed] = useState<number>(1);
@@ -139,7 +140,7 @@ export default function VideoUploader() {
         URL.revokeObjectURL(url);
       }, 100);
       
-      showSuccess(`Successfully exported ${sliceResults.length} slice${sliceResults.length > 1 ? 's' : ''} in a zip file!`);
+      // showSuccess(`Successfully exported ${sliceResults.length} slice${sliceResults.length > 1 ? 's' : ''} in a zip file!`);
     } catch (error) {
       console.error('Error splitting video:', error);
       showError(`Error splitting video: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -300,14 +301,6 @@ export default function VideoUploader() {
     setErrorModal({show: true, message});
   };
 
-  // Add this function to show the success modal
-  const showSuccess = (message: string) => {
-    // Only show the modal if the user hasn't chosen to hide them
-    if (!hideSuccessMessages) {
-      setSliceCreationModal({show: true, message});
-    }
-  };
-
   // Add this function to show the slice created modal
   const showSliceCreatedSuccess = () => {
     setSliceCreatedModal(true);
@@ -318,7 +311,8 @@ export default function VideoUploader() {
     if (videoRef.current) {
       videoRef.current.playbackRate = speed;
       setPlaybackSpeed(speed);
-      showSuccess(`Playback speed set to ${speed}x`);
+      // setShowSpeedChangedModal(true);
+      // showSuccess(`Playback speed set to ${speed}x`);
     }
   };
 
@@ -342,34 +336,18 @@ export default function VideoUploader() {
       <OptionalInfoModal
         show={sliceCreationInfoModal.show}
         message={sliceCreationInfoModal.message}
-        hideSuccessMessages={hideSuccessMessages}
-        onHideSuccessMessagesChange={setHideSuccessMessages}
+        hideSuccessMessages={hideSliceCreationModal}
+        onHideSuccessMessagesChange={setHideSliceCreationModal}
         onClose={() => setSliceCreationModal({show: false, message: ""})}
       />
       
       {/* Slice Created Success Modal */}
-      {sliceCreatedModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="absolute inset-0 bg-black opacity-50"></div>
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full z-10 relative">
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Success</h3>
-              <p className="text-gray-600 text-center mb-6">Successfully created the slice!</p>
-              <button
-                onClick={() => setSliceCreatedModal(false)}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SuccessModal
+        show={sliceCreatedModal}
+        title="Success"
+        description="Successfully created the slice!"
+        onClose={() => setSliceCreatedModal(false)}
+      />
       
       {/* Speed Control Modal */}
       {showSpeedModal && (
@@ -648,7 +626,9 @@ export default function VideoUploader() {
                     setIsSplitting(true);
                     setSplittingStartTime(currentTime);
                     console.log("Start splitting at", formatTime(currentTime));
-                    showSuccess("Slicing started, click on \"End Splitting\" to create your slice.");
+                    if (!hideSliceCreationModal) {
+                      setSliceCreationModal({show: true, message: "Slicing started, click on \"End Splitting\" to create your slice."});
+                    }
                   }}
                   disabled={slices.some(slice => currentTime >= slice.start && currentTime <= slice.end)}
                   className={`px-4 py-2 bg-blue-600 text-white rounded-md transition-colors ${
