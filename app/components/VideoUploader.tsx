@@ -9,6 +9,7 @@ import OptionalInfoModal from '@/app/components/modals/optionalInfo';
 import SuccessModal from '@/app/components/modals/success';
 import PlaybackSpeedModal from '@/app/components/modals/playbackSpeed';
 import WarningModal from '@/app/components/modals/warning';
+import ExportSuccessModal from '@/app/components/modals/success/export';
 
 // Add this type declaration at the top of your file, after your existing imports
 declare module 'react' {
@@ -29,8 +30,8 @@ export default function VideoUploader() {
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [popupPosition, setPopupPosition] = useState(0);
-  const [isSplitting, setIsSplitting] = useState(false);
-  const [splittingStartTime, setSplittingStartTime] = useState<number | null>(null);
+  const [isSlicing, setIsSlicing] = useState(false);
+  const [slicingStartTime, setSlicingStartTime] = useState<number | null>(null);
   const [slices, setSlices] = useState<Slice[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -45,23 +46,23 @@ export default function VideoUploader() {
   const [showNoSlicesToExportModal, setShowNoSlicesToExportModal] = useState<boolean>(false);
   const [videoSize, setVideoSize] = useState<number | null>(null);
   const [showVideoSizeWarningModal, setShowVideoSizeWarningModal] = useState<boolean>(false);
-  const [showSplittingInProgressModal, setShowSplittingInProgressModal] = useState<boolean>(false);
+  const [showSlicingInProgressModal, setShowSlicingInProgressModal] = useState<boolean>(false);
   const [showExportSuccessModal, setShowExportSuccessModal] = useState<boolean>(false);
 
   const ffmpegRef = useRef<FFmpeg | null>(null);
 
 
-  const splitVideo = async () => {
+  const sliceVideo = async () => {
     const ffmpeg = ffmpegRef.current;
     if (!ffmpeg) {
       showError("FFmpeg is not initialized. Please refresh the page and try again.");
-      setShowSplittingInProgressModal(false);
+      setShowSlicingInProgressModal(false);
       return;
     }
 
     if (!videoSrc) {
       showError("No video source found. Please upload a video first.");
-      setShowSplittingInProgressModal(false);
+      setShowSlicingInProgressModal(false);
       return;
     }
 
@@ -146,12 +147,12 @@ export default function VideoUploader() {
       setTimeout(() => {
         URL.revokeObjectURL(url);
       }, 100);
-      setShowSplittingInProgressModal(false);
+      setShowSlicingInProgressModal(false);
       setShowExportSuccessModal(true);
     } catch (error) {
-      console.error('Error splitting video:', error);
-      showError(`Error splitting video: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setShowSplittingInProgressModal(false);
+      console.error('Error slicing video:', error);
+      showError(`Error slicing video: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setShowSlicingInProgressModal(false);
     }
   };
 
@@ -270,7 +271,7 @@ export default function VideoUploader() {
       // Show popup at click position with calculated transform
       setPopupPosition(clickPosition);
       
-      if (!isSplitting) {
+      if (!isSlicing) {
         // check if the clicked moment is inside a slice
         const isInsideSlice = slices.some(slice => 
           newTime >= slice.start && newTime <= slice.end
@@ -282,7 +283,6 @@ export default function VideoUploader() {
     }
   };
 
-  // Hide split popups
   const handleClosePopups = () => {
     setShowDeleteSlicePopup(false);
   };
@@ -320,7 +320,7 @@ export default function VideoUploader() {
     <div className="flex flex-col items-center justify-center w-full">
       {/* Slicing in Progress Modal */}
       <ProgressingModal 
-        show={showSplittingInProgressModal}
+        show={showSlicingInProgressModal}
         title="Processing Video"
         description="Generating your video slices. This might take a while. Please wait and make sure to keep this window open."
       />
@@ -344,8 +344,8 @@ export default function VideoUploader() {
       {/* Slice Created Success Modal */}
       <SuccessModal
         show={sliceCreatedModal}
-        title="Success"
-        description="Successfully created the slice!"
+        title="Slice Created!"
+        description="Click on the slice if you want to delete it."
         onClose={() => setSliceCreatedModal(false)}
       />
       
@@ -365,15 +365,15 @@ export default function VideoUploader() {
       />
 
 
-      <WarningModal
+      <ErrorModal
         show={showNoSlicesToExportModal}
-        title="No Slices Available"
-        description="There are no slices to export! Create some slices first then export them."
+        // title="No Slices Available"
+        message="There are no slices to export! Create some slices first then export them."
         onClose={() => setShowNoSlicesToExportModal(false)}
       />
 
 
-      <SuccessModal
+      <ExportSuccessModal
         show={showExportSuccessModal}
         title="Export Success"
         description={`Successfully exported ${slices.length} slice${slices.length > 1 ? 's' : ''} in a zip file! Check your browser's downloads.`}
@@ -384,15 +384,15 @@ export default function VideoUploader() {
       {videoSize && (
         <WarningModal
           show={showVideoSizeWarningModal}
-          title="Memory Usage Warning"
-          description={`Your video's file size is ${formatVideoSize(videoSize)}. Please make sure you have at least 2 times more available memory on your device before proceeding; otherwise, you might get errors.`}
+          title=""
+          description={`Your video's file size is ${formatVideoSize(videoSize)}. Please make sure you have at least (2 * [${formatVideoSize(videoSize)}] = ${formatVideoSize(videoSize * 2)}) available memory on your device before proceeding; otherwise, you might get errors.`}
           onClose={() => setShowVideoSizeWarningModal(false)}
           onConfirm={async () => {
             setShowVideoSizeWarningModal(false);
-            setShowSplittingInProgressModal(true);
-            await splitVideo();
+            setShowSlicingInProgressModal(true);
+            await sliceVideo();
           }}
-          confirmText="Split the video into slices"
+          confirmText="Continue slicing the video"
           showCancel
         />
       )}
@@ -480,7 +480,7 @@ export default function VideoUploader() {
               <span>{formatTime(duration)}</span>
             </div>
             <div 
-              className={`relative h-16 ${isSplitting ? 'bg-red-50' : 'bg-gray-200'} rounded w-full cursor-pointer`}
+              className={`relative h-16 ${isSlicing ? 'bg-red-50' : 'bg-gray-200'} rounded w-full cursor-pointer`}
               onClick={handleTimelineClick}
             >
               {/* Slice Segments */}
@@ -501,11 +501,11 @@ export default function VideoUploader() {
                 style={{ left: `calc(${(currentTime / duration) * 100}% - 1px)` }}
               />
               
-              {/* Splitting Start Time Cursor */}
-              {isSplitting && splittingStartTime !== null && (
+              {/* Slicing Start Time Cursor */}
+              {isSlicing && slicingStartTime !== null && (
                 <div 
                   className="absolute top-0 h-full w-1 bg-blue-500 hover:bg-blue-600 transition-colors z-10"
-                  style={{ left: `calc(${(splittingStartTime / duration) * 100}% - 1px)` }}
+                  style={{ left: `calc(${(slicingStartTime / duration) * 100}% - 1px)` }}
                 />
               )}
               
@@ -551,15 +551,15 @@ export default function VideoUploader() {
             </div>
             
             <div className="flex flex-row justify-center items-center mt-4 md:mt-8 gap-4">
-              {!isSplitting && splittingStartTime === null && (
+              {!isSlicing && slicingStartTime === null && (
                 <button 
                   onClick={() => {
                     videoRef.current?.pause();
-                    setIsSplitting(true);
-                    setSplittingStartTime(currentTime);
-                    console.log("Start splitting at", formatTime(currentTime));
+                    setIsSlicing(true);
+                    setSlicingStartTime(currentTime);
+                    console.log("Start slicing at", formatTime(currentTime));
                     if (!hideSliceCreationModal) {
-                      setSliceCreationModal({show: true, message: "Slicing started, click on \"End Splitting\" to create your slice."});
+                      setSliceCreationModal({show: true, message: "Slicing started, select the end of the slice and click on \"End Slicing\" button to create your slice. Click on \"Cancel Slicing\" to cancel the slicing process."});
                     }
                   }}
                   disabled={slices.some(slice => currentTime >= slice.start && currentTime <= slice.end)}
@@ -569,18 +569,18 @@ export default function VideoUploader() {
                       : 'hover:bg-blue-700 cursor-pointer'
                   }`}
                 >
-                  Start Splitting
+                  Start a new Slice
                 </button>
               )}
-              {isSplitting && splittingStartTime !== null && (
+              {isSlicing && slicingStartTime !== null && (
                 <>
                   <button
                     onClick={() => {
                       videoRef.current?.pause();
-                      if (splittingStartTime !== null) {
+                      if (slicingStartTime !== null) {
                         const newSlice = {
-                          start: Math.min(splittingStartTime, currentTime),
-                          end: Math.max(splittingStartTime, currentTime)
+                          start: Math.min(slicingStartTime, currentTime),
+                          end: Math.max(slicingStartTime, currentTime)
                         };
                         const hasOverlap = slices.some(slice => 
                           newSlice.start <= slice.end && slice.start <= newSlice.end
@@ -596,8 +596,8 @@ export default function VideoUploader() {
                             setSlices([...slices, newSlice]);
                             console.log("Added slice:", formatTime(newSlice.start), "to", formatTime(newSlice.end));
                             showSliceCreatedSuccess();
-                            setIsSplitting(false);
-                            setSplittingStartTime(null);
+                            setIsSlicing(false);
+                            setSlicingStartTime(null);
                           }
                         }
                       }
@@ -605,17 +605,17 @@ export default function VideoUploader() {
                     }}
                     className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors cursor-pointer"
                   >
-                    End Splitting
+                    End Slicing
                   </button>
                   <button 
                     onClick={() => {
                       videoRef.current?.pause();
-                      setIsSplitting(false);
-                      setSplittingStartTime(null);
+                      setIsSlicing(false);
+                      setSlicingStartTime(null);
                     }}
                     className="px-4 py-2 border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white rounded-md transition-colors cursor-pointer"
                   >
-                    Cancel Splitting
+                    Cancel Slicing
                   </button>
                   
                 </>

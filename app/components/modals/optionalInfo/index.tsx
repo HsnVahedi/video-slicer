@@ -21,10 +21,8 @@ export default function SuccessModal({
     <div className="fixed inset-0 flex items-center justify-center z-50">
       <div className="absolute inset-0 bg-black opacity-50"></div>
       <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full z-10 relative">
-        <div className="flex flex-col items-center">
-          <p className="text-gray-600 text-center mb-6">{message}</p>
-          
-          {/* Checkbox for "Don't show this message again" */}
+        <div className="flex flex-col">
+          <p className="text-gray-600 mb-6">{message}</p>
           <div className="flex items-center mb-4 w-full">
             <input
               id="dont-show-again"
