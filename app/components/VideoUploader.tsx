@@ -5,6 +5,7 @@ import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL } from "@ffmpeg/util";
 import ErrorModal from '@/app/components/modals/error';
 import ProgressingModal from '@/app/components/modals/progress';
+import OptionalInfoModal from '@/app/components/modals/optionalInfo';
 
 
 type Slice = {
@@ -28,7 +29,7 @@ export default function VideoUploader() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [showDeleteSlicePopup, setShowDeleteSlicePopup] = useState(false);
   const [errorModal, setErrorModal] = useState<{show: boolean, message: string}>({show: false, message: ""});
-  const [successModal, setSuccessModal] = useState<{show: boolean, message: string}>({show: false, message: ""});
+  const [sliceCreationInfoModal, setSliceCreationModal] = useState<{show: boolean, message: string}>({show: false, message: ""});
   const [sliceCreatedModal, setSliceCreatedModal] = useState<boolean>(false);
   const [hideSuccessMessages, setHideSuccessMessages] = useState<boolean>(false);
   const [showSpeedModal, setShowSpeedModal] = useState<boolean>(false);
@@ -303,7 +304,7 @@ export default function VideoUploader() {
   const showSuccess = (message: string) => {
     // Only show the modal if the user hasn't chosen to hide them
     if (!hideSuccessMessages) {
-      setSuccessModal({show: true, message});
+      setSliceCreationModal({show: true, message});
     }
   };
 
@@ -338,37 +339,13 @@ export default function VideoUploader() {
       />
       
       {/* Success Modal */}
-      {successModal.show && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="absolute inset-0 bg-black opacity-50"></div>
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full z-10 relative">
-            <div className="flex flex-col items-center">
-              <p className="text-gray-600 text-center mb-6">{successModal.message}</p>
-              
-              {/* Checkbox for "Don't show this message again" */}
-              <div className="flex items-center mb-4 w-full">
-                <input
-                  id="dont-show-again"
-                  type="checkbox"
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                  checked={hideSuccessMessages}
-                  onChange={(e) => setHideSuccessMessages(e.target.checked)}
-                />
-                <label htmlFor="dont-show-again" className="ml-2 text-sm text-gray-600 cursor-pointer">
-                  Don't show this message again
-                </label>
-              </div>
-              
-              <button
-                onClick={() => setSuccessModal({show: false, message: ""})}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <OptionalInfoModal
+        show={sliceCreationInfoModal.show}
+        message={sliceCreationInfoModal.message}
+        hideSuccessMessages={hideSuccessMessages}
+        onHideSuccessMessagesChange={setHideSuccessMessages}
+        onClose={() => setSliceCreationModal({show: false, message: ""})}
+      />
       
       {/* Slice Created Success Modal */}
       {sliceCreatedModal && (
