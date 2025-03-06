@@ -46,6 +46,7 @@ export default function VideoUploader() {
   const [videoSize, setVideoSize] = useState<number | null>(null);
   const [showVideoSizeWarningModal, setShowVideoSizeWarningModal] = useState<boolean>(false);
   const [showSplittingInProgressModal, setShowSplittingInProgressModal] = useState<boolean>(false);
+  const [showExportSuccessModal, setShowExportSuccessModal] = useState<boolean>(false);
 
   const ffmpegRef = useRef<FFmpeg | null>(null);
 
@@ -145,12 +146,11 @@ export default function VideoUploader() {
       setTimeout(() => {
         URL.revokeObjectURL(url);
       }, 100);
-      
-      // showSuccess(`Successfully exported ${sliceResults.length} slice${sliceResults.length > 1 ? 's' : ''} in a zip file!`);
+      setShowSplittingInProgressModal(false);
+      setShowExportSuccessModal(true);
     } catch (error) {
       console.error('Error splitting video:', error);
       showError(`Error splitting video: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
       setShowSplittingInProgressModal(false);
     }
   };
@@ -370,6 +370,14 @@ export default function VideoUploader() {
         title="No Slices Available"
         description="There are no slices to export! Create some slices first then export them."
         onClose={() => setShowNoSlicesToExportModal(false)}
+      />
+
+
+      <SuccessModal
+        show={showExportSuccessModal}
+        title="Export Success"
+        description={`Successfully exported ${slices.length} slice${slices.length > 1 ? 's' : ''} in a zip file! Check your browser's downloads.`}
+        onClose={() => setShowExportSuccessModal(false)}
       />
 
 
