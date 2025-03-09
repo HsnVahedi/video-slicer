@@ -525,7 +525,7 @@ export default function VideoUploader() {
               {/* Delete Slice Popup */}
               {showDeleteSlicePopup && (
                 <div
-                  className="absolute bg-white shadow-lg rounded-md p-3 z-20 border border-gray-300 cursor-default"
+                  className="absolute bg-white dark:bg-gray-800 shadow-lg rounded-md p-3 z-20 border border-gray-300 dark:border-gray-700 cursor-default"
                   style={{ 
                     left: `${popupPosition}px`, 
                     top: '100%',
@@ -602,9 +602,8 @@ export default function VideoUploader() {
                         if (hasOverlap) {
                           showError("Slices cannot have overlaps with each other");
                         } else {
-                          // Check if the start and end of the new slice are at least 2 seconds apart
                           if (newSlice.end - newSlice.start < 2) {
-                            showError("Slices must be at least 2 seconds apart");
+                            showError("Slices must be at least 2 seconds");
                           } else {
                             setSlices([...slices, newSlice]);
                             console.log("Added slice:", formatTime(newSlice.start), "to", formatTime(newSlice.end));
