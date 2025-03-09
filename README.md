@@ -1,3 +1,11 @@
+## Free Video Slicer
+
+It's up and running at freevideoslicer.com
+
+It's for those who want to get several slices out of a large video all at once.
+
+It uses [ffmpeg webassembly](https://github.com/ffmpegwasm/ffmpeg.wasm) to slice the videos
+
 ## Getting Started
 
 First, run the development server:
